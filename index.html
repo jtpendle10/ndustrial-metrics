@@ -188,17 +188,20 @@
 
             const data = {
                 query: `query total_electricity($to: String, $from: String) {
-                    facilities {
-                        nodes {
-                            name
-                            slug
-                            id
-                            metricData(label: "total_electricity_usage", to: $to, from: $from, aggregation: LAST, samplingWindow: "10 year", window: "10 year") {
-                                nodes { time data }
-                            }
-                        }
-                    }
-                }`,
+  facilities {
+    nodes {
+      name
+      slug
+      id
+      metricData(label: "total_electricity_usage", to: $to, from: $from, aggregation: LAST,  samplingWindow: "10 year",  window: "10 year") {
+        nodes {
+          time
+          data
+        }
+      }
+    }
+  }
+}`,
                 variables: {
                     to: to,
                     from: from
