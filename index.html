@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <title>Ndustrial Metrics Dashboard</title>
     <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
         body {
             font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
             background-color: #9AAA4D;
@@ -11,9 +15,14 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+        }
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             justify-content: flex-start;
-            min-height: 100vh;
-            margin: 0;
+            width: 100%;
             padding: 2rem;
         }
         h1 {
@@ -48,7 +57,7 @@
             width: 100%;
         }
         #last-updated {
-            margin-top: 2rem;
+            padding: 1rem;
             font-size: 1rem;
             text-align: center;
         }
@@ -60,20 +69,22 @@
 </head>
 <body>
 
-    <img class="logo" src="https://ndustrial.io/wp-content/uploads/2020/08/Group-642.png" alt="Ndustrial Logo">
-    <h1>Ndustrial Metrics Dashboard</h1>
+    <main>
+        <img class="logo" src="https://ndustrial.io/wp-content/uploads/2020/08/Group-642.png" alt="Ndustrial Logo">
+        <h1>Ndustrial Metrics Dashboard</h1>
 
-    <div class="dashboard">
-        <div class="metric-box" id="trailer-box">
-            <h2>Trailer Appointments Processed</h2>
-            <div class="value" id="trailer-response">Loading...</div>
-        </div>
+        <div class="dashboard">
+            <div class="metric-box" id="trailer-box">
+                <h2>Trailer Appointments Processed</h2>
+                <div class="value" id="trailer-response">Loading...</div>
+            </div>
 
-        <div class="metric-box" id="solar-box">
-            <h2>Current Metered Solar Generation</h2>
-            <div class="value" id="solar-response">Loading...</div>
+            <div class="metric-box" id="solar-box">
+                <h2>Current Metered Solar Generation</h2>
+                <div class="value" id="solar-response">Loading...</div>
+            </div>
         </div>
-    </div>
+    </main>
 
     <div id="last-updated">Last updated: --</div>
 
