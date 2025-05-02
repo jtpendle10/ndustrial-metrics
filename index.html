@@ -84,7 +84,7 @@
             </div>
 
             <div class="metric-box">
-                <h2>Facility Energy Usage</h2>
+                <h2>Total Demand</h2>
                 <div class="value" id="energy-response">Loading...</div>
             </div>
         </div>
@@ -223,7 +223,7 @@
                     const facilitySum = dataPoints.reduce((fSum, dp) => fSum + dp.data, 0);
                     return sum + facilitySum;
                 }, 0);
-                el.innerText = `${total.toFixed(2)} kWh`;
+                el.innerText = `${total.toFixed(2)} kW`;
             })
             .catch(() => {
                 const el = document.getElementById('energy-response');
