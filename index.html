@@ -231,11 +231,13 @@ samplingWindow: "10 year"
                 }, 0);
                 el.innerText = `${total.toFixed(2)} kW`;
             })
-            .catch(() => {
-                const el = document.getElementById('energy-response');
-                el.innerText = 'Network Error';
-                el.classList.add('error');
-            });
+            .catch((err) => {
+    console.error('Energy fetch error:', err);
+    const el = document.getElementById('energy-response');
+    el.innerText = 'Network Error (check console)';
+    el.classList.add('error');
+});
+
         }
 
         function fetchAllData() {
