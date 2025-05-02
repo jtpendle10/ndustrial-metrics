@@ -31,15 +31,21 @@
             font-weight: bold;
             text-align: center;
         }
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+            width: 100%;
+        }
         .metric-box {
             background-color: #e0e0e0;
             color: #111;
             padding: 2rem;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            margin: 1rem;
             width: 100%;
-            max-width: 600px;
+            max-width: 350px;
             text-align: center;
         }
         .value {
@@ -48,13 +54,6 @@
         }
         .error {
             color: red;
-        }
-        .dashboard {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 2rem;
-            width: 100%;
         }
         #last-updated {
             padding: 1rem;
@@ -74,14 +73,19 @@
         <h1>Ndustrial Metrics Dashboard</h1>
 
         <div class="dashboard">
-            <div class="metric-box" id="trailer-box">
+            <div class="metric-box">
                 <h2>Trailer Appointments Processed</h2>
                 <div class="value" id="trailer-response">Loading...</div>
             </div>
 
-            <div class="metric-box" id="solar-box">
+            <div class="metric-box">
                 <h2>Current Metered Solar Generation</h2>
                 <div class="value" id="solar-response">Loading...</div>
+            </div>
+
+            <div class="metric-box">
+                <h2>Facility Energy Usage</h2>
+                <div class="value" id="energy-response">Loading...</div>
             </div>
         </div>
     </main>
@@ -89,8 +93,7 @@
     <div id="last-updated">Last updated: --</div>
 
     <script>
-        const trailerApiUrl = 'https://trailer-proxy.onrender.com/proxy';
-        const solarApiUrl = 'https://solar-backend-210u.onrender.com/proxy';
+        const apiUrl = 'https://trailer-proxy.onrender.com/proxy'; // shared backend proxy
 
         function updateGlobalTimestamp() {
             const updatedTime = new Date();
@@ -100,41 +103,31 @@
 
         function fetchTrailerData() {
             const data = {
-                query: `
-                    query trailerApptCount {
-                        trailerAppointments {
-                            totalCount
-                            __typename
-                        }
-                    }
-                `
+                query: `query trailerApptCount {
+                    trailerAppointments { totalCount __typename }
+                }`
             };
 
-            fetch(trailerApiUrl, {
+            fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
-            .then(response => response.json())
+            .then(res => res.json())
             .then(result => {
-                const trailerDiv = document.getElementById('trailer-response');
-                trailerDiv.classList.remove('error');
-
-                if (result.data && result.data.trailerAppointments) {
-                    trailerDiv.innerText = result.data.trailerAppointments.totalCount;
-                } else if (result.errors && result.errors.length > 0) {
-                    trailerDiv.innerText = 'GraphQL Error: ' + result.errors[0].message;
-                    trailerDiv.classList.add('error');
+                const el = document.getElementById('trailer-response');
+                el.classList.remove('error');
+                if (result.data?.trailerAppointments) {
+                    el.innerText = result.data.trailerAppointments.totalCount;
                 } else {
-                    trailerDiv.innerText = 'Error: Unexpected response format';
-                    trailerDiv.classList.add('error');
+                    el.innerText = 'Error';
+                    el.classList.add('error');
                 }
             })
-            .catch(error => {
-                console.error(error);
-                const trailerDiv = document.getElementById('trailer-response');
-                trailerDiv.innerText = 'Network Error';
-                trailerDiv.classList.add('error');
+            .catch(() => {
+                const el = document.getElementById('trailer-response');
+                el.innerText = 'Network Error';
+                el.classList.add('error');
             });
         }
 
@@ -148,15 +141,9 @@
                 query: `query($filter: MainServiceFilter, $from: String!, $to: String!, $aggregation: MetricDataAggregationMethod!) {
                     mainServices(filter: $filter) {
                         nodes {
-                            type
                             meterDemand {
                                 data(from: $from, to: $to, aggregation: $aggregation) {
-                                    nodes {
-                                        time
-                                        data
-                                        label
-                                        metadata
-                                    }
+                                    nodes { data }
                                 }
                             }
                         }
@@ -170,39 +157,86 @@
                 }
             };
 
-            fetch(solarApiUrl, {
+            fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
             .then(res => res.json())
             .then(result => {
-                const solarDiv = document.getElementById('solar-response');
-                solarDiv.classList.remove('error');
-
-                const mainServiceNodes = result.data.mainServices.nodes;
-                const total = mainServiceNodes.reduce((sum, serviceNode) => {
-                    const dataNodes = serviceNode.meterDemand.data.nodes;
-                    if (dataNodes.length > 0) {
-                        const lastDataValue = dataNodes[dataNodes.length - 1].data;
-                        return sum + lastDataValue;
-                    }
-                    return sum;
+                const el = document.getElementById('solar-response');
+                el.classList.remove('error');
+                const nodes = result.data.mainServices.nodes;
+                const total = nodes.reduce((sum, n) => {
+                    const d = n.meterDemand.data.nodes;
+                    return d.length ? sum + d[d.length - 1].data : sum;
                 }, 0);
-
-                solarDiv.innerText = `${total.toFixed(2)} kW`;
+                el.innerText = `${total.toFixed(2)} kW`;
             })
-            .catch(err => {
-                console.error(err);
-                const solarDiv = document.getElementById('solar-response');
-                solarDiv.innerText = 'Error loading data';
-                solarDiv.classList.add('error');
+            .catch(() => {
+                const el = document.getElementById('solar-response');
+                el.innerText = 'Network Error';
+                el.classList.add('error');
+            });
+        }
+
+        function fetchEnergyData() {
+            const now = new Date();
+            const oneHourAgo = new Date(now.getTime() - 30 * 60 * 1000);
+            const to = now.toISOString();
+            const from = oneHourAgo.toISOString();
+
+            const data = {
+                query: `query total_electricity($label: String!, $to: String, $from: String, $aggregation: MetricDataAggregationMethod, $samplingWindow: String, $window: String!) {
+                    facilities {
+                        nodes {
+                            name
+                            slug
+                            id
+                            metricData(label: "total_electricity_usage", to: $to, from: $from, aggregation: LAST, samplingWindow: "10 year", window: "10 year") {
+                                nodes { time data }
+                            }
+                        }
+                    }
+                }`,
+                variables: {
+                    label: "total_electricity_usage",
+                    to: to,
+                    from: from,
+                    aggregation: "LAST",
+                    samplingWindow: "10 year",
+                    window: "10 year"
+                }
+            };
+
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(result => {
+                const el = document.getElementById('energy-response');
+                el.classList.remove('error');
+                const facilityNodes = result.data.facilities.nodes;
+                const total = facilityNodes.reduce((sum, facility) => {
+                    const dataPoints = facility.metricData.nodes;
+                    const facilitySum = dataPoints.reduce((fSum, dp) => fSum + dp.data, 0);
+                    return sum + facilitySum;
+                }, 0);
+                el.innerText = `${total.toFixed(2)} kWh`;
+            })
+            .catch(() => {
+                const el = document.getElementById('energy-response');
+                el.innerText = 'Network Error';
+                el.classList.add('error');
             });
         }
 
         function fetchAllData() {
             fetchTrailerData();
             fetchSolarData();
+            fetchEnergyData();
             updateGlobalTimestamp();
         }
 
