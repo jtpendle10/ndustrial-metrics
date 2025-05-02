@@ -187,13 +187,13 @@
             const from = oneHourAgo.toISOString();
 
             const data = {
-                query: `query total_electricity($to: String, $from: String) {
+                query: `query total_electricity($to: String, $from: String, $label: String!, $aggregation: MetricDataAggregationMethod, $window: String!, $samplingWindow: String) {
   facilities {
     nodes {
       name
       slug
       id
-      metricData(label: "total_electricity_usage", to: $to, from: $from, aggregation: LAST,  samplingWindow: "10 year",  window: "10 year") {
+      metricData(to: $to, from: $from,  label: $label,  aggregation: $aggregation,  window: $window,  samplingWindow: $samplingWindow) {
         nodes {
           time
           data
@@ -202,10 +202,15 @@
     }
   }
 }`,
-                variables: {
-                    to: to,
-                    from: from
-                }
+                variables: 
+                {
+from: from,
+to: to,
+label: "total_electricity_usage",
+aggregation: "LAST",
+window: "10 year",
+samplingWindow: "10 year"
+}
             };
 
             fetch(apiUrl, {
