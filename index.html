@@ -187,7 +187,7 @@
             const from = oneHourAgo.toISOString();
 
             const data = {
-                query: `query total_electricity($label: String!, $to: String, $from: String, $aggregation: MetricDataAggregationMethod, $samplingWindow: String, $window: String!) {
+                query: `query total_electricity($to: String, $from: String) {
                     facilities {
                         nodes {
                             name
@@ -200,12 +200,8 @@
                     }
                 }`,
                 variables: {
-                    label: "total_electricity_usage",
                     to: to,
-                    from: from,
-                    aggregation: "LAST",
-                    samplingWindow: "10 year",
-                    window: "10 year"
+                    from: from
                 }
             };
 
