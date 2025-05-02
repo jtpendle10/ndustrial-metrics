@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ndustrial Metrics Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background-color: #9AAA4D;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: bold;
+            text-align: center;
+        }
+        .metric-box {
+            background-color: #e0e0e0;
+            color: #111;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin: 1rem;
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+        .value {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        .error {
+            color: red;
+        }
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+            width: 100%;
+        }
+        #last-updated {
+            margin-top: 2rem;
+            font-size: 1rem;
+            text-align: center;
+        }
+        img.logo {
+            width: 200px;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <img class="logo" src="https://ndustrial.io/wp-content/uploads/2020/08/Group-642.png" alt="Ndustrial Logo">
+    <h1>Ndustrial Metrics Dashboard</h1>
+
+    <div class="dashboard">
+        <div class="metric-box" id="trailer-box">
+            <h2>Trailer Appointments Processed</h2>
+            <div class="value" id="trailer-response">Loading...</div>
+        </div>
+
+        <div class="metric-box" id="solar-box">
+            <h2>Current Metered Solar Generation</h2>
+            <div class="value" id="solar-response">Loading...</div>
+        </div>
+    </div>
+
+    <div id="last-updated">Last updated: --</div>
+
+    <script>
+        const trailerApiUrl = 'https://trailer-proxy.onrender.com/proxy';
+        const solarApiUrl = 'https://solar-backend-210u.onrender.com/proxy';
+
+        function updateGlobalTimestamp() {
+            const updatedTime = new Date();
+            document.getElementById('last-updated').innerText =
+                `Last updated: ${updatedTime.toLocaleString()}`;
+        }
+
+        function fetchTrailerData() {
+            const data = {
+                query: `
+                    query trailerApptCount {
+                        trailerAppointments {
+                            totalCount
+                            __typename
+                        }
+                    }
+                `
+            };
+
+            fetch(trailerApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                const trailerDiv = document.getElementById('trailer-response');
+                trailerDiv.classList.remove('error');
+
+                if (result.data && result.data.trailerAppointments) {
+                    trailerDiv.innerText = result.data.trailerAppointments.totalCount;
+                } else if (result.errors && result.errors.length > 0) {
+                    trailerDiv.innerText = 'GraphQL Error: ' + result.errors[0].message;
+                    trailerDiv.classList.add('error');
+                } else {
+                    trailerDiv.innerText = 'Error: Unexpected response format';
+                    trailerDiv.classList.add('error');
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                const trailerDiv = document.getElementById('trailer-response');
+                trailerDiv.innerText = 'Network Error';
+                trailerDiv.classList.add('error');
+            });
+        }
+
+        function fetchSolarData() {
+            const now = new Date();
+            const oneHourAgo = new Date(now.getTime() - 30 * 60 * 1000);
+            const to = now.toISOString();
+            const from = oneHourAgo.toISOString();
+
+            const data = {
+                query: `query($filter: MainServiceFilter, $from: String!, $to: String!, $aggregation: MetricDataAggregationMethod!) {
+                    mainServices(filter: $filter) {
+                        nodes {
+                            type
+                            meterDemand {
+                                data(from: $from, to: $to, aggregation: $aggregation) {
+                                    nodes {
+                                        time
+                                        data
+                                        label
+                                        metadata
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }`,
+                variables: {
+                    filter: { type: { equalTo: "SOLAR" } },
+                    from: from,
+                    to: to,
+                    aggregation: "LAST"
+                }
+            };
+
+            fetch(solarApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(result => {
+                const solarDiv = document.getElementById('solar-response');
+                solarDiv.classList.remove('error');
+
+                const mainServiceNodes = result.data.mainServices.nodes;
+                const total = mainServiceNodes.reduce((sum, serviceNode) => {
+                    const dataNodes = serviceNode.meterDemand.data.nodes;
+                    if (dataNodes.length > 0) {
+                        const lastDataValue = dataNodes[dataNodes.length - 1].data;
+                        return sum + lastDataValue;
+                    }
+                    return sum;
+                }, 0);
+
+                solarDiv.innerText = `${total.toFixed(2)} kW`;
+            })
+            .catch(err => {
+                console.error(err);
+                const solarDiv = document.getElementById('solar-response');
+                solarDiv.innerText = 'Error loading data';
+                solarDiv.classList.add('error');
+            });
+        }
+
+        function fetchAllData() {
+            fetchTrailerData();
+            fetchSolarData();
+            updateGlobalTimestamp();
+        }
+
+        fetchAllData();
+        setInterval(fetchAllData, 45000);
+    </script>
+</body>
+</html>
