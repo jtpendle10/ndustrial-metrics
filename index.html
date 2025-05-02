@@ -182,9 +182,9 @@
 
         function fetchEnergyData() {
             const now = new Date();
-            const oneHourAgo = new Date(now.getTime() - 30 * 60 * 1000);
+            const twoDaysAgo = new Date(now.getTime() - 60 * 60 * 1000 * 48);
             const to = now.toISOString();
-            const from = oneHourAgo.toISOString();
+            const from = twoDaysAgo.toISOString();
 
             const data = {
                 query: `query total_electricity($to: String, $from: String, $label: String!, $aggregation: MetricDataAggregationMethod, $window: String!, $samplingWindow: String) {
