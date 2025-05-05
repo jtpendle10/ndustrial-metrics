@@ -164,7 +164,9 @@
                     filter: { type: { equalTo: "SOLAR" } },
                     from: from,
                     to: to,
-                    aggregation: "LAST"
+                    aggregation: "LAST",
+                    window: "1 year",
+                    samplingWindow: "1 minute"
                 }
             };
 
