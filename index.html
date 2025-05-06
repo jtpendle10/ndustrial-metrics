@@ -206,17 +206,11 @@ facilities {
         name
         slug
         id
-        metricData(to: $to, from: $from, label: $label, aggregation: $aggregation, window: $window, samplingWindow: $samplingWindow) {
-            nodes {
-                time
-                data
-            }
-        }
         mainServices {
             nodes {
                 name
                 demand {
-                    data(from: $from, to: $to, aggregation: $aggregation, window: $window, samplingWindow: $samplingWindow) {
+                    data(from: $from, to: $to, aggregation: $aggregation, window: $window, samplingWindow: $samplingWindow, last: $last, orderBy: $orderBy) {
                         nodes {
                             data
                             time
@@ -231,10 +225,11 @@ facilities {
         variables: {
             from: from,
             to: to,
-            label: "total_electricity_usage",
-            aggregation: "LAST",
-            window: "10 year",
-            samplingWindow: "1 minute"
+            aggregation: "AVG",
+            window: "15min",
+            samplingWindow: "15min",
+            last: 1,
+            orderBt: "TIME_DESC"
         }
     };
 
