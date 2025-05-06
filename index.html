@@ -195,32 +195,33 @@
 
 function fetchEnergyData() {
     const now = new Date();
-    const twoDaysAgo = new Date(now.getTime() - 60 * 60 * 1000 * 48);
     const to = now.toISOString();
-    const from = twoDaysAgo.toISOString();
+    const from = new Date(now.getTime() - 60 * 60 * 1000 * 48).toISOString();
 
     const data = {
-        query: `query total_demand($to: String, $from: String, $aggregation: MetricDataAggregationMethod, $window: String!, $samplingWindow: String, last: $last, orderBy: $orderBy) {
-facilities {
+        query: `query currentDemand($from: String!, $to: String!, $aggregation: MetricDataAggregationMethod!, $window: String!, $samplingWindow: String, $last: Int, $orderBy: MetricDataOrderBy!) {
+  facilities {
     nodes {
-        name
-        slug
-        id
-        mainServices {
-            nodes {
-                name
-                demand {
-                    data(from: $from, to: $to, aggregation: $aggregation, window: $window, samplingWindow: $samplingWindow, last: $last, orderBy: $orderBy) {
-                        nodes {
-                            data
-                            time
-                        }
-                    }
-                }
+      id
+      name
+      city
+      state
+      mainServices {
+        nodes {
+          name
+          id
+          demand {
+            data(from: $from, to: $to, aggregation: $aggregation, window: $window, samplingWindow: $samplingWindow, last: $last, orderBy: $orderBy) {
+              nodes {
+                data
+                time
+              }
             }
+          }
         }
+      }
     }
-}
+  }
 }`,
         variables: {
             from: from,
@@ -229,7 +230,7 @@ facilities {
             window: "15min",
             samplingWindow: "15min",
             last: 1,
-            orderBt: "TIME_DESC"
+            orderBy: "TIME_DESC"
         }
     };
 
@@ -242,16 +243,16 @@ facilities {
     .then(result => {
         const el = document.getElementById('energy-response');
         el.classList.remove('error');
-        const facilityNodes = result.data.facilities.nodes;
 
         let totalDemand = 0;
 
+        const facilityNodes = result.data.facilities.nodes;
         facilityNodes.forEach(facility => {
             facility.mainServices.nodes.forEach(service => {
                 if (service.demand && service.demand.data && service.demand.data.nodes.length) {
-                    service.demand.data.nodes.forEach(node => {
-                        totalDemand += node.data;
-                    });
+                    // Only take the first (latest) value, because we used last:1
+                    const latestNode = service.demand.data.nodes[0];
+                    totalDemand += latestNode.data;
                 }
             });
         });
