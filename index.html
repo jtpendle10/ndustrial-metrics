@@ -200,7 +200,7 @@ function fetchEnergyData() {
     const from = twoDaysAgo.toISOString();
 
     const data = {
-        query: `query total_electricity($to: String, $from: String, $label: String!, $aggregation: MetricDataAggregationMethod, $window: String!, $samplingWindow: String) {
+        query: `query total_demand($to: String, $from: String, $aggregation: MetricDataAggregationMethod, $window: String!, $samplingWindow: String, last: $last, orderBy: $orderBy) {
 facilities {
     nodes {
         name
