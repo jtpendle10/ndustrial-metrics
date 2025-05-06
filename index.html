@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Nsight Metrics Dashboard</title>
     <style>
+    /* Basic page styles and layout */
     html, body {
         height: 100%;
         margin: 0;
@@ -79,39 +80,43 @@
 <body>
 
     <main>
+        <!-- Dashboard header and logo -->
         <img class="logo" src="https://ndustrial.io/wp-content/uploads/2020/08/Group-642.png" alt="Ndustrial Logo">
         <h1>Ndustrial Metrics Dashboard</h1>
 
+        <!-- Metric boxes for displaying values -->
        <div class="dashboard">
-    <div class="metric-box">
-        <h2>Trailer Appointments Processed</h2>
-        <div class="value" id="trailer-response">Loading...</div>
-    </div>
+        <div class="metric-box">
+            <h2>Trailer Appointments Processed</h2>
+            <div class="value" id="trailer-response">Loading...</div>
+        </div>
 
-    <div class="metric-box">
-        <h2>Current Demand From Solar</h2>
-        <div class="value" id="solar-response">Loading...</div>
-    </div>
+        <div class="metric-box">
+            <h2>Current Demand From Solar</h2>
+            <div class="value" id="solar-response">Loading...</div>
+        </div>
 
-    <div class="metric-box">
-        <h2>Current Total Demand</h2>
-        <div class="value" id="energy-response">Loading...</div>
+        <div class="metric-box">
+            <h2>Current Total Demand</h2>
+            <div class="value" id="energy-response">Loading...</div>
+        </div>
     </div>
-</div>
-
     </main>
 
+    <!-- Last updated timestamp -->
     <div id="last-updated">Last updated: --</div>
 
     <script>
-        const apiUrl = 'https://trailer-proxy.onrender.com/proxy'; // shared backend proxy
+        const apiUrl = 'https://trailer-proxy.onrender.com/proxy'; // shared backend proxy URL
 
+        // Update the timestamp shown on the dashboard
         function updateGlobalTimestamp() {
             const updatedTime = new Date();
             document.getElementById('last-updated').innerText =
                 `Last updated: ${updatedTime.toLocaleString()}`;
         }
 
+        // Fetch trailer appointment count and update dashboard
         function fetchTrailerData() {
             const data = {
                 query: `query trailerApptCount {
@@ -142,6 +147,7 @@
             });
         }
 
+        // Fetch solar data and sum the latest values
         function fetchSolarData() {
             const now = new Date();
             const oneHourAgo = new Date(now.getTime() - 30 * 60 * 1000);
@@ -180,6 +186,7 @@
                 const el = document.getElementById('solar-response');
                 el.classList.remove('error');
                 const nodes = result.data.mainServices.nodes;
+                // Sum the last data point of each node
                 const total = nodes.reduce((sum, n) => {
                     const d = n.meterDemand.data.nodes;
                     return d.length ? sum + d[d.length - 1].data : sum;
@@ -193,13 +200,14 @@
             });
         }
 
-function fetchEnergyData() {
-    const now = new Date();
-    const to = now.toISOString();
-    const from = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+        // Fetch facility energy data and sum the latest demand values
+        function fetchEnergyData() {
+            const now = new Date();
+            const to = now.toISOString();
+            const from = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
 
-    const data = {
-        query: `query currentDemand($from: String!, $to: String!, $aggregation: MetricDataAggregationMethod!, $window: String!, $samplingWindow: String, $last: Int, $orderBy: MetricDataOrderBy!) {
+            const data = {
+                query: `query currentDemand($from: String!, $to: String!, $aggregation: MetricDataAggregationMethod!, $window: String!, $samplingWindow: String, $last: Int, $orderBy: MetricDataOrderBy!) {
   facilities {
     nodes {
       id
@@ -223,51 +231,52 @@ function fetchEnergyData() {
     }
   }
 }`,
-        variables: {
-            from: from,
-            to: to,
-            aggregation: "AVG",
-            window: "15min",
-            samplingWindow: "15min",
-            last: 1,
-            orderBy: "TIME_DESC"
-        }
-    };
-
-    fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    })
-    .then(res => res.json())
-    .then(result => {
-        const el = document.getElementById('energy-response');
-        el.classList.remove('error');
-
-        let totalDemand = 0;
-
-        const facilityNodes = result.data.facilities.nodes;
-        facilityNodes.forEach(facility => {
-            facility.mainServices.nodes.forEach(service => {
-                if (service.demand && service.demand.data && service.demand.data.nodes.length) {
-                    // Only take the first (latest) value, because we used last:1
-                    const latestNode = service.demand.data.nodes[0];
-                    totalDemand += latestNode.data;
+                variables: {
+                    from: from,
+                    to: to,
+                    aggregation: "AVG",
+                    window: "15min",
+                    samplingWindow: "15min",
+                    last: 1,
+                    orderBy: "TIME_DESC"
                 }
+            };
+
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(result => {
+                const el = document.getElementById('energy-response');
+                el.classList.remove('error');
+
+                let totalDemand = 0;
+
+                const facilityNodes = result.data.facilities.nodes;
+                facilityNodes.forEach(facility => {
+                    facility.mainServices.nodes.forEach(service => {
+                        if (service.demand && service.demand.data && service.demand.data.nodes.length) {
+                            // Only take the first (latest) value, because we used last:1
+                            const latestNode = service.demand.data.nodes[0];
+                            totalDemand += latestNode.data;
+                        }
+                    });
+                });
+
+                const totalMW = totalDemand / 1000;
+                el.innerText = `${totalMW.toFixed(2)} MW`;
+            })
+            .catch((err) => {
+                console.error('Energy fetch error:', err);
+                const el = document.getElementById('energy-response');
+                el.innerText = 'Network Error (check console)';
+                el.classList.add('error');
             });
-        });
+        }
 
-        const totalMW = totalDemand / 1000;
-        el.innerText = `${totalMW.toFixed(2)} MW`;
-    })
-    .catch((err) => {
-        console.error('Energy fetch error:', err);
-        const el = document.getElementById('energy-response');
-        el.innerText = 'Network Error (check console)';
-        el.classList.add('error');
-    });
-}
-
+        // Run all fetch functions and update timestamp
         function fetchAllData() {
             fetchTrailerData();
             fetchSolarData();
@@ -275,6 +284,7 @@ function fetchEnergyData() {
             updateGlobalTimestamp();
         }
 
+        // Initial fetch and repeat every 45 seconds
         fetchAllData();
         setInterval(fetchAllData, 45000);
     </script>
