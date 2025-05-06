@@ -196,7 +196,7 @@
 function fetchEnergyData() {
     const now = new Date();
     const to = now.toISOString();
-    const from = new Date(now.getTime() - 60 * 60 * 1000 * 48).toISOString();
+    const from = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
 
     const data = {
         query: `query currentDemand($from: String!, $to: String!, $aggregation: MetricDataAggregationMethod!, $window: String!, $samplingWindow: String, $last: Int, $orderBy: MetricDataOrderBy!) {
