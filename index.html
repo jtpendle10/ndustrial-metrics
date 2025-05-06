@@ -193,66 +193,84 @@
             });
         }
 
-        function fetchEnergyData() {
-            const now = new Date();
-            const twoDaysAgo = new Date(now.getTime() - 60 * 60 * 1000 * 48);
-            const to = now.toISOString();
-            const from = twoDaysAgo.toISOString();
+function fetchEnergyData() {
+    const now = new Date();
+    const twoDaysAgo = new Date(now.getTime() - 60 * 60 * 1000 * 48);
+    const to = now.toISOString();
+    const from = twoDaysAgo.toISOString();
 
-            const data = {
-                query: `query total_electricity($to: String, $from: String, $label: String!, $aggregation: MetricDataAggregationMethod, $window: String!, $samplingWindow: String) {
-  facilities {
+    const data = {
+        query: `query total_electricity($to: String, $from: String, $label: String!, $aggregation: MetricDataAggregationMethod, $window: String!, $samplingWindow: String) {
+facilities {
     nodes {
-      name
-      slug
-      id
-      metricData(to: $to, from: $from,  label: $label,  aggregation: $aggregation,  window: $window,  samplingWindow: $samplingWindow) {
-        nodes {
-          time
-          data
-          __typename
+        name
+        slug
+        id
+        metricData(to: $to, from: $from, label: $label, aggregation: $aggregation, window: $window, samplingWindow: $samplingWindow) {
+            nodes {
+                time
+                data
+            }
         }
-      }
+        mainServices {
+            nodes {
+                name
+                demand {
+                    data(from: $from, to: $to, aggregation: $aggregation, window: $window, samplingWindow: $samplingWindow) {
+                        nodes {
+                            data
+                            time
+                        }
+                    }
+                }
+            }
+        }
     }
-  }
-}`,
-                variables: 
-                {
-from: from,
-to: to,
-label: "total_electricity_usage",
-aggregation: "LAST",
-window: "10 year",
-samplingWindow: "1 minute"
 }
-            };
-
-            fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(res => res.json())
-            .then(result => {
-                const el = document.getElementById('energy-response');
-                el.classList.remove('error');
-                const facilityNodes = result.data.facilities.nodes;
-                const totalkW = facilityNodes.reduce((sum, facility) => {
-                    const dataPoints = facility.metricData.nodes;
-                    const facilitySum = dataPoints.reduce((fSum, dp) => fSum + dp.data, 0);
-                    return sum + facilitySum;
-                }, 0);
-                const totalMW = totalkW / 1000;
-                el.innerText = `${totalMW.toFixed(2)} MW`;
-            })
-            .catch((err) => {
-    console.error('Energy fetch error:', err);
-    const el = document.getElementById('energy-response');
-    el.innerText = 'Network Error (check console)';
-    el.classList.add('error');
-});
-
+}`,
+        variables: {
+            from: from,
+            to: to,
+            label: "total_electricity_usage",
+            aggregation: "LAST",
+            window: "10 year",
+            samplingWindow: "1 minute"
         }
+    };
+
+    fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(result => {
+        const el = document.getElementById('energy-response');
+        el.classList.remove('error');
+        const facilityNodes = result.data.facilities.nodes;
+
+        let totalDemand = 0;
+
+        facilityNodes.forEach(facility => {
+            facility.mainServices.nodes.forEach(service => {
+                if (service.demand && service.demand.data && service.demand.data.nodes.length) {
+                    service.demand.data.nodes.forEach(node => {
+                        totalDemand += node.data;
+                    });
+                }
+            });
+        });
+
+        const totalMW = totalDemand / 1000;
+        el.innerText = `${totalMW.toFixed(2)} MW`;
+    })
+    .catch((err) => {
+        console.error('Energy fetch error:', err);
+        const el = document.getElementById('energy-response');
+        el.innerText = 'Network Error (check console)';
+        el.classList.add('error');
+    });
+}
 
         function fetchAllData() {
             fetchTrailerData();
